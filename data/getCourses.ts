@@ -10,7 +10,7 @@ import fs from 'fs';
         let coursesRaw: { [key: string]: string } = {};
 
         // iterate over assist URL id for every given program
-        for (let pageID: number = 112; pageID <= 150; pageID++) {
+        for (let pageID: number = 1; pageID <= 150; pageID++) {
             // grab the cc name from its id and filter out UC/CSU schools
             const communityColleges = JSON.parse(fs.readFileSync('./data/agreementIDs.json', 'utf8'));
             if (!(pageID.toString() in communityColleges)) {
@@ -42,13 +42,13 @@ agreement=${pageID}agreementType%3Dfrom&view=agreement&viewBy=major&viewSendingA
             console.log("Articulation data found")
             
             // grab all articulated course data for ucsc & the given cc
-            const ucscCourses = await page.$$eval('.rowReceiving', element => element.map(element => {
+            const ucscCourses: string[] = await page.$$eval('.rowReceiving', element => element.map(element => {
                 const text = element.textContent?.trim();
                 if (text == null) {
                     return 'NULL';
                 } return text;
             }));
-            const ccCourses = await page.$$eval('.rowSending', element => element.map(element => {
+            const ccCourses: string[] = await page.$$eval('.rowSending', element => element.map(element => {
                 const text = element.textContent?.trim();
                 if (text == null) {
                     return 'NULL';
@@ -59,7 +59,12 @@ agreement=${pageID}agreementType%3Dfrom&view=agreement&viewBy=major&viewSendingA
             
             // write course data to the cc's json file
             for (let i = 0; i < ucscCourses.length; i++) {
-                coursesRaw[ucscCourses[i]] = ccCourses[i];
+                if (ucscCourses[i].includes('\n')) {
+                    const courseArr: string[] = ucscCourses[i].split('\n')
+                    courseArr.forEach((element) => {
+                        coursesRaw[element] = ccCourses[i];
+                    })
+                } else { coursesRaw[ucscCourses[i]] = ccCourses[i] }
             }
             const jsonString = JSON.stringify(coursesRaw, null, 4);
             const fileName = `${pageID}.json`;
